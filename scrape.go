@@ -48,6 +48,8 @@ func doRequest(url string) (io.ReadCloser, error) {
 
 	req.Header.Add("User-Agent", fmt.Sprintf("prometheus-html-exporter/%s", BuildVersion))
 
+	log.Infof("scraping page %s", url)
+
 	resp, err := client.Do(req)
 
 	if err != nil {
