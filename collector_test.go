@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -47,6 +48,15 @@ func TestMakeNewConstMetric(t *testing.T) {
 	_, err := makeNewConstMetric(testExporterConfig, value)
 
 	ok(t, err)
+}
+
+func TestMakeMetricDesc(t *testing.T) {
+	config := testExporterConfig
+	expected := config.GlobalConfig.MetricNamePrefix + config.ScrapeConfig.MetricConfig.Name
+
+	desc := makeMetricDesc(config)
+
+	assert(t, strings.Contains(desc.String(), "fqName: \""+expected), "expected metric name to be %s, got %s", expected, desc.String())
 }
 
 func TestMakeNewConstMetric_unsupportedMetricType(t *testing.T) {

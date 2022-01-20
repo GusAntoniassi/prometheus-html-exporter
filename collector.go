@@ -5,7 +5,6 @@ import (
 
 	"github.com/GusAntoniassi/prometheus-html-exporter/internal/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
-	log "github.com/sirupsen/logrus"
 )
 
 type collector struct {
@@ -13,12 +12,10 @@ type collector struct {
 }
 
 func (c collector) Describe(ch chan<- *prometheus.Desc) {
-	prometheus.DescribeByCollect(c, ch)
+	ch <- makeMetricDesc(c.config)
 }
 
 func (c collector) Collect(ch chan<- prometheus.Metric) {
-	log.Info("begin collect")
-
 	value, err := scrape(c.config.ScrapeConfig)
 
 	if err != nil {
@@ -35,6 +32,17 @@ func (c collector) Collect(ch chan<- prometheus.Metric) {
 	ch <- metric
 }
 
+func makeMetricDesc(config types.ExporterConfig) *prometheus.Desc {
+	metricConfig := config.ScrapeConfig.MetricConfig
+
+	return prometheus.NewDesc(
+		config.GlobalConfig.MetricNamePrefix+metricConfig.Name,
+		metricConfig.Help,
+		getLabelKeys(metricConfig.Labels),
+		nil,
+	)
+}
+
 func makeNewConstMetric(config types.ExporterConfig, value float64) (prometheus.Metric, error) {
 	metricConfig := config.ScrapeConfig.MetricConfig
 	var valueType prometheus.ValueType
@@ -48,12 +56,7 @@ func makeNewConstMetric(config types.ExporterConfig, value float64) (prometheus.
 		valueType = getPrometheusValueType(metricConfig.Type)
 	}
 
-	desc := prometheus.NewDesc(
-		config.GlobalConfig.MetricNamePrefix+metricConfig.Name,
-		metricConfig.Help,
-		getLabelKeys(metricConfig.Labels),
-		nil,
-	)
+	desc := makeMetricDesc(config)
 
 	labelValues := getLabelValues(metricConfig.Labels)
 	metric, err := prometheus.NewConstMetric(desc, valueType, value, labelValues...)
