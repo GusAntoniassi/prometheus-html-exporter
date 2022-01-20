@@ -3,36 +3,29 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/GusAntoniassi/prometheus-html-exporter/internal/pkg/types"
+	"github.com/akamensky/argparse"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
+	parser := argparse.NewParser("html-exporter", "Parses exported command-line configuration flags")
 
-	config := types.ExporterConfig{
-		ScrapeConfig: types.ScrapeConfig{
-			Address:               "https://en.wikipedia.org/wiki/Special:Statistics",
-			Selector:              "//div[@id='mw-content-text']//tr[@class='mw-statistics-articles']/td[@class='mw-statistics-numbers']/text()",
-			DecimalPointSeparator: ".",
-			ThousandsSeparator:    ",",
-			MetricConfig: types.MetricConfig{
-				Name: "wikipedia_articles_total",
-				Type: "gauge",
-				Help: "Total of articles available at Wikipedia",
-				Labels: map[string]string{
-					"language": "english",
-				},
-			},
-		},
-		GlobalConfig: types.GlobalConfig{
-			MetricNamePrefix: "htmlexporter_",
-			Port:             9883,
-		},
+	configFile := parser.File("c", "config", os.O_RDONLY, 0600, &argparse.Options{
+		Help:     "Path to the YAML configuration file",
+		Required: true,
+	})
+
+	err := parser.Parse(os.Args)
+	if err != nil {
+		fmt.Print(parser.Usage(err))
+		os.Exit(1)
 	}
 
+	config := getConfig(configFile)
 	metricRegistry, err := getExporterMetricsRegistry()
 
 	if err != nil {

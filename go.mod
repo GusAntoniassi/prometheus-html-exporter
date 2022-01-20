@@ -3,6 +3,7 @@ module github.com/GusAntoniassi/prometheus-html-exporter
 go 1.17
 
 require (
+	github.com/akamensky/argparse v1.3.1
 	github.com/antchfx/htmlquery v1.2.4
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1

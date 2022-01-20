@@ -1,0 +1,15 @@
+scrape_config:
+  address: "https://en.wikipedia.org/wiki/Special:Statistics"
+  selector: "//div[@id='mw-content-text']//tr[@class='mw-statistics-articles']/td[@class='mw-statistics-numbers']/text()"
+  decimal_point_separator: "."
+  thousands_separator: ","
+  metric:
+    name: wikipedia_articles_total
+    type: gauge
+    help: "Total of articles available at Wikipedia"
+    labels:
+      language: english
+
+global_config:
+  port: 9883
+  metric_name_prefix: "htmlexporter_"

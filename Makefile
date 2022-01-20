@@ -1,6 +1,6 @@
 .PHONY: run
 run:
-	go run .
+	go run . -c examples/full-config.yaml
 
 .PHONY: test
 test:

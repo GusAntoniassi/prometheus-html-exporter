@@ -1,0 +1,7 @@
+sample
+config
+yaml:
+  123Foobar: 999
+  "This is a big syntax mess"
+
+!!! Hopefully the test will fail !!!
