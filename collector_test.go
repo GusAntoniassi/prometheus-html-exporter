@@ -66,7 +66,7 @@ func TestMakeNewConstMetric_unsupportedMetricType(t *testing.T) {
 
 	_, err := makeNewConstMetric(config, value)
 	assert(t, err != nil, "makeNewConstMetric should return an error if the metric type is summary")
-	errorContains(t, err, "not implemented yet")
+	errorContains(t, err, "not supported")
 }
 
 func TestMakeNewConstMetric_errorCreatingMetric(t *testing.T) {

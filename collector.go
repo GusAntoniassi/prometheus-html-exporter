@@ -48,10 +48,9 @@ func makeNewConstMetric(config types.ExporterConfig, value float64) (prometheus.
 	var valueType prometheus.ValueType
 
 	switch metricConfig.Type {
-	case "summary":
-		return nil, fmt.Errorf("not implemented yet")
 	case "histogram":
-		return nil, fmt.Errorf("not implemented yet")
+	case "summary":
+		return nil, fmt.Errorf("metric type \"%s\" is not supported", metricConfig.Type)
 	default:
 		valueType = getPrometheusValueType(metricConfig.Type)
 	}
