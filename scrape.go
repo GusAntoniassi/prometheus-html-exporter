@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,29 +11,70 @@ import (
 	"github.com/GusAntoniassi/prometheus-html-exporter/internal/pkg/types"
 	"github.com/antchfx/htmlquery"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/html"
 )
 
-func scrape(config types.ScrapeConfig) (float64, error) {
-	log.Debugf("requesting URL '%s'", config.Address)
-	body, err := doRequest(config.Address)
-	if err != nil {
-		return 0, err
+func scrape(targets []types.TargetConfig) [][]float64 {
+	targetCount := len(targets)
+	scrapedValues := make([][]float64, targetCount)
+
+	for i, target := range targets {
+		targetValues, err := scrapeTarget(target)
+
+		// An error here will only mean there is an issue with the request itself
+		// Failed individual metrics will return NaN if there is an error
+		if err != nil {
+			log.Warnf("error scraping target %s: %s", target.Address, err)
+			// @TODO: increment scrape error metric
+			continue
+		}
+
+		scrapedValues[i] = targetValues
 	}
 
-	log.Debugf("scraping value from requested URL with XPath selector '%s'", config.Selector)
-	scrapedValue, err := parseSelector(body, config.Selector)
+	return scrapedValues
+}
 
-	if err != nil {
-		return 0, err
+func scrapeTarget(target types.TargetConfig) ([]float64, error) {
+	metricCount := len(target.Metrics)
+	scrapedValues := make([]float64, metricCount)
+
+	// initialize the slice with NaN to allow early returns and identify errors later on
+	for i := range scrapedValues {
+		scrapedValues[i] = math.NaN()
 	}
 
-	numberValue, err := normalizeNumericValue(scrapedValue, config.ThousandsSeparator, config.DecimalPointSeparator)
+	log.Debugf("requesting URL '%s'", target.Address)
+	body, err := doRequest(target.Address)
 	if err != nil {
-		return 0, err
+		return scrapedValues, err
 	}
 
-	log.Debugf("scraped value '%0.2f' from URL '%s'", numberValue, config.Address)
-	return numberValue, nil
+	document, err := parseDomContent(body)
+	if err != nil {
+		return scrapedValues, err
+	}
+
+	for i, metric := range target.Metrics {
+		log.Debugf("scraping value from requested URL with XPath selector '%s'", metric.Selector)
+		scrapedValue, err := parseSelector(document, metric.Selector)
+
+		if err != nil {
+			log.Warnf("error scraping value for metric %s with XPATH selector '%s'. error: %s", metric.Name, metric.Selector, err.Error())
+			continue
+		}
+
+		numberValue, err := normalizeNumericValue(scrapedValue, target.ThousandsSeparator, target.DecimalPointSeparator)
+		if err != nil {
+			log.Warnf("error normalizing value %s for metric %s with XPATH selector '%s'. error: %s", scrapedValue, metric.Name, metric.Selector, err.Error())
+			continue
+		}
+
+		log.Debugf("scraped value '%0.2f' from URL '%s'", numberValue, target.Address)
+		scrapedValues[i] = numberValue
+	}
+
+	return scrapedValues, nil
 }
 
 func doRequest(url string) (io.ReadCloser, error) {
@@ -63,14 +105,19 @@ func doRequest(url string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-func parseSelector(body io.ReadCloser, selector string) (string, error) {
+func parseDomContent(body io.ReadCloser) (*html.Node, error) {
 	doc, err := htmlquery.Parse(body)
 
 	if err != nil {
-		return "", fmt.Errorf("error loading the response body into XPath nodes. error: %s", err)
+		// this error is mostly relating to body reading errors so it won't be covered in tests
+		return nil, fmt.Errorf("error loading the response body into XPath nodes. error: %s", err)
 	}
 
-	nodes, err := htmlquery.QueryAll(doc, selector)
+	return doc, nil
+}
+
+func parseSelector(document *html.Node, selector string) (string, error) {
+	nodes, err := htmlquery.QueryAll(document, selector)
 
 	if err != nil {
 		return "", fmt.Errorf("error querying the XPath expression `%s`. error: %s", selector, err)
@@ -91,6 +138,9 @@ func parseSelector(body io.ReadCloser, selector string) (string, error) {
 }
 
 func normalizeNumericValue(value string, thousandsSeparator string, decimalSeparator string) (float64, error) {
+	// Replace non-breaking space characters with regular space before parsing
+	value = strings.ReplaceAll(value, "\u00a0", " ")
+
 	// Replace separators to convert the string into a format accepted by strconv
 	value = strings.ReplaceAll(strings.ReplaceAll(value, thousandsSeparator, ""), decimalSeparator, ".")
 

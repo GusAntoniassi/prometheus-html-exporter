@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path"
 	"reflect"
 	"strings"
 	"testing"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func getTestDir(tb testing.TB) string {
@@ -43,7 +46,12 @@ func equals(tb testing.TB, exp, act interface{}) {
 }
 
 func errorContains(tb testing.TB, err error, errorSubstr string) {
+	assert(tb, err != nil, "err should not be nil")
 	assert(tb, strings.Contains(err.Error(), errorSubstr), "expected error containing %q, got: %s", errorSubstr, err.Error())
+}
+
+func assertWarningLog(tb testing.TB, logOutput string) {
+	assert(tb, strings.Contains(logOutput, "\"level\":\"warning\""), "expected a warning log message. log output was: %s", logOutput)
 }
 
 func compareStringSlices(a []string, b []string) bool {
@@ -68,4 +76,13 @@ func compareStringSlices(a []string, b []string) bool {
 	}
 
 	return true
+}
+
+func captureLogOutput() *bytes.Buffer {
+	log.SetFormatter(&log.JSONFormatter{})
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+
+	return &buf
 }

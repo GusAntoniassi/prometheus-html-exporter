@@ -22,11 +22,11 @@ make test
 ### Implemented
 - Scrape a web value using XPath
 - YAML file configuration
+- Support for multiple different metrics and webpages
 
 ### Under development:
 - Binary and Docker image releases
 - Query param configuration (allows native integration with Prometheus `scrape_configs`)
-- Multiple endpoint configuration
 - Exporter instrumentation (metrics about the scrape itself)
 - Timeouts
 - Basic auth scrape

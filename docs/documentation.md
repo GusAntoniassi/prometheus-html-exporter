@@ -8,15 +8,15 @@ For instance, let's say you needed a metric on how many Wikipedia articles there
 Prometheus HTML exporter does it automatically for you, so you wouldn't have to write any code, just a simple YAML config:
 
 ```yaml
-scrape_config:
-  address: "https://en.wikipedia.org/wiki/Special:Statistics"
-  selector: "//div[@id='mw-content-text']//tr[@class='mw-statistics-articles']/td[@class='mw-statistics-numbers']/text()"
-  metric:
-    name: wikipedia_articles_total
-    type: gauge
-    help: "Total of articles available at Wikipedia"
-    labels:
-      language: english
+targets:
+  - address: "https://en.wikipedia.org/wiki/Special:Statistics"
+    metrics:
+      - name: wikipedia_articles_total
+        type: gauge
+        help: "Total of articles available at Wikipedia"
+        selector: "//div[@id='mw-content-text']//tr[@class='mw-statistics-articles']/td[@class='mw-statistics-numbers']/text()"
+        labels:
+          language: english
 ```
 
 ## Configuring

@@ -2,69 +2,166 @@ package main
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/GusAntoniassi/prometheus-html-exporter/internal/pkg/types"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 func TestCollect(t *testing.T) {
-	html := "<div id=\"foobar\">1,234,567.08</div>"
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, html)
-	}))
-
 	config := testExporterConfig
-	config.ScrapeConfig.Address = server.URL
+	expectedLabels := make([]map[string]string, 0, len(config.Targets))
+
+	for i, target := range config.Targets {
+		html := fmt.Sprintf("<div id=\"foobar\">1%s234%s567%s08</div>", target.ThousandsSeparator, target.ThousandsSeparator, target.DecimalPointSeparator)
+
+		server := getTestServer(html)
+
+		config.Targets[i].Address = server.URL
+
+		for _, metric := range target.Metrics {
+			expectedLabels = append(expectedLabels, metric.Labels)
+		}
+	}
 
 	collector := collector{config: config}
 
-	ch := make(chan prometheus.Metric, 1)
+	ch := make(chan prometheus.Metric)
+
+	go func() {
+		collector.Collect(ch)
+		close(ch)
+	}()
+
+	counter := 0
+	for metric := range ch {
+		assert(t, metric != nil, "collect should not return a nil metric")
+
+		result := readMetric(metric)
+		assert(t, result.value == 1234567.08, "expected scraped metric value to be 1234567.08, got %0.2f", result.value)
+		assert(t, reflect.DeepEqual(result.labels, expectedLabels[counter]), "expected scraped metric label to be %#v, got %#v", expectedLabels[counter], result.labels)
+
+		counter++
+	}
+}
+
+func TestCollect_errorMakingConstMetric(t *testing.T) {
+	server := getTestServer("<div id=\"foobar\">123</div>")
+	config := testExporterConfig
+	config.Targets = []types.TargetConfig{{
+		Address: server.URL,
+		Metrics: []types.MetricConfig{{
+			Name: "foo",
+			Type: "summary",
+		}},
+	}}
+
+	collector := collector{config: config}
+
+	// recover from panic
+	defer func() { recover() }()
+
+	ch := make(chan prometheus.Metric)
 
 	collector.Collect(ch)
-	metric := <-ch
-	assert(t, metric != nil, "collect should not return a nil metric")
+	t.Errorf("should panic when configured with a summary metric")
+}
+
+func TestDescribe(t *testing.T) {
+	config := testExporterConfig
+	config.Targets = []types.TargetConfig{
+		{Metrics: []types.MetricConfig{
+			{Name: "foo"},
+			{Name: "bar"},
+		}},
+		{Metrics: []types.MetricConfig{
+			{Name: "foobar"},
+		}},
+	}
+
+	prefix := config.GlobalConfig.MetricNamePrefix
+	expectedMetricNames := []string{
+		prefix + "foo",
+		prefix + "bar",
+		prefix + "foobar",
+	}
+
+	collector := collector{config: config}
+
+	ch := make(chan *prometheus.Desc)
+
+	go func() {
+		collector.Describe(ch)
+		close(ch)
+	}()
+
+	counter := 0
+	for desc := range ch {
+		assert(
+			t,
+			strings.Contains(
+				desc.String(),
+				"fqName: \""+expectedMetricNames[counter],
+			),
+			"expected metric name to be %s, got %s",
+			expectedMetricNames[counter],
+			desc.String(),
+		)
+		counter++
+	}
 }
 
 func TestCollect_scrapeError(t *testing.T) {
 	config := testExporterConfig
-	config.ScrapeConfig.Address = "foo://bar.dev"
+	config.Targets[0].Address = "foo://bar.dev"
 
 	collector := collector{config: config}
 
+	// recover from panic
 	defer func() { recover() }()
 
 	ch := make(chan prometheus.Metric, 1)
 
 	collector.Collect(ch)
-	t.Errorf("should panic when configured with a summary metric (not implemented yet)")
-}
-
-func TestMakeNewConstMetric(t *testing.T) {
-	value := 123.0
-	_, err := makeNewConstMetric(testExporterConfig, value)
-
-	ok(t, err)
+	t.Errorf("should panic when configured with a summary metric")
 }
 
 func TestMakeMetricDesc(t *testing.T) {
 	config := testExporterConfig
-	expected := config.GlobalConfig.MetricNamePrefix + config.ScrapeConfig.MetricConfig.Name
 
-	desc := makeMetricDesc(config)
+	for _, target := range config.Targets {
+		for _, metric := range target.Metrics {
+			expected := config.GlobalConfig.MetricNamePrefix + metric.Name
 
-	assert(t, strings.Contains(desc.String(), "fqName: \""+expected), "expected metric name to be %s, got %s", expected, desc.String())
+			desc := makeMetricDesc(config, metric)
+
+			assert(t, strings.Contains(desc.String(), "fqName: \""+expected), "expected metric name to be %s, got %s", expected, desc.String())
+		}
+	}
+}
+
+func TestMakeNewConstMetric(t *testing.T) {
+	value := 123.0
+	metric := types.MetricConfig{
+		Name: "foobar",
+		Type: "gauge",
+	}
+	_, err := makeNewConstMetric(testExporterConfig, metric, value)
+
+	ok(t, err)
 }
 
 func TestMakeNewConstMetric_unsupportedMetricType(t *testing.T) {
 	value := 123.0
 	config := testExporterConfig
-	config.ScrapeConfig.MetricConfig.Type = "summary"
+	metric := types.MetricConfig{
+		Name: "foobar",
+		Type: "summary",
+	}
 
-	_, err := makeNewConstMetric(config, value)
+	_, err := makeNewConstMetric(config, metric, value)
 	assert(t, err != nil, "makeNewConstMetric should return an error if the metric type is summary")
 	errorContains(t, err, "not supported")
 }
@@ -72,9 +169,11 @@ func TestMakeNewConstMetric_unsupportedMetricType(t *testing.T) {
 func TestMakeNewConstMetric_errorCreatingMetric(t *testing.T) {
 	value := 123.0
 	config := testExporterConfig
-	config.ScrapeConfig.MetricConfig.Name = "%invalid metric name!!%"
+	metric := types.MetricConfig{
+		Name: "%invalid metric name!!%",
+	}
 
-	_, err := makeNewConstMetric(config, value)
+	_, err := makeNewConstMetric(config, metric, value)
 	assert(t, err != nil, "makeNewConstMetric should return an error for an invalid metric")
 }
 

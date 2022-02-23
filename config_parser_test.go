@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"path"
 	"testing"
+
+	"github.com/GusAntoniassi/prometheus-html-exporter/internal/pkg/types"
 )
 
 func openTestFile(t *testing.T, filename string) *os.File {
@@ -15,12 +17,6 @@ func openTestFile(t *testing.T, filename string) *os.File {
 	assert(t, err == nil, fmt.Sprintf("error opening sample file: %s. this is likely a problem in the test itself", err))
 
 	return sampleFile
-}
-
-func TestGetDefaultConfig(t *testing.T) {
-	config := getDefaultConfig()
-
-	assert(t, config.GlobalConfig.Port == 9883, "default port should be 9883, got %d", config.GlobalConfig.Port)
 }
 
 func TestReadConfigFile(t *testing.T) {
@@ -39,7 +35,33 @@ func TestParseConfig(t *testing.T) {
 	config, err := parseConfig(configFile)
 	ok(t, err)
 
-	assert(t, config.ScrapeConfig.MetricConfig.Name == "wikipedia_articles_total", "metric name should be 'wikipedia_articles_total', got: %s", config.ScrapeConfig.MetricConfig.Name)
+	expected := "wikipedia_articles_total"
+	actual := config.Targets[0].Metrics[0].Name
+
+	assert(t, expected == actual, "metric name should be %s, got: '%s'", expected, actual)
+}
+
+func TestParseConfig_withDefaultValues(t *testing.T) {
+	sampleFile := openTestFile(t, "sample-config-minimal.yaml")
+	configFile, err := readConfigFile(sampleFile)
+	ok(t, err)
+
+	config, err := parseConfig(configFile)
+	ok(t, err)
+
+	expectedActual := []map[string]string{
+		{"desc": "metric_name_prefix", "expected": "htmlexporter_", "actual": config.GlobalConfig.MetricNamePrefix},
+		{"desc": "port", "expected": "9883", "actual": fmt.Sprintf("%d", config.GlobalConfig.Port)},
+	}
+
+	for _, value := range expectedActual {
+		assert(t, value["expected"] == value["actual"], "expected value of %s to be %s, got %s", value["desc"], value["expected"], value["actual"])
+	}
+
+	for _, target := range config.Targets {
+		assert(t, target.DecimalPointSeparator == ".", "expected decimal point separator to be '.', got: '%s'", target.DecimalPointSeparator)
+		assert(t, target.ThousandsSeparator == ",", "expected thousands separator to be ',', got: '%s'", target.ThousandsSeparator)
+	}
 }
 
 func TestParseConfig_invalidParameters(t *testing.T) {
@@ -90,4 +112,20 @@ func TestGetConfig_invalidConfig(t *testing.T) {
 	}
 
 	t.Fatalf("process ran with err %v, want exit status 1", err)
+}
+
+func TestAddTargetDefaults(t *testing.T) {
+	config := types.ExporterConfig{
+		Targets: []types.TargetConfig{
+			{Metrics: []types.MetricConfig{
+				{},
+			}},
+		},
+	}
+
+	addTargetDefaults(&config)
+
+	assert(t, config.Targets[0].DecimalPointSeparator == ".", "expected default decimal point separator to be '.', got: '%s'", config.Targets[0].DecimalPointSeparator)
+	assert(t, config.Targets[0].ThousandsSeparator == ",", "expected default thousands separator to be ',', got: '%s'", config.Targets[0].ThousandsSeparator)
+	assert(t, config.Targets[0].Metrics[0].Type == "untyped", "expected default metric type to be 'untyped', got: '%s'", config.Targets[0].Metrics[0].Type)
 }
