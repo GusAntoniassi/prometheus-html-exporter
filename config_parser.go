@@ -10,10 +10,6 @@ import (
 
 func getDefaultConfig() types.ExporterConfig {
 	return types.ExporterConfig{
-		ScrapeConfig: types.ScrapeConfig{
-			DecimalPointSeparator: ".",
-			ThousandsSeparator:    ",",
-		},
 		GlobalConfig: types.GlobalConfig{
 			MetricNamePrefix: "htmlexporter_",
 			Port:             9883,
@@ -24,13 +20,13 @@ func getDefaultConfig() types.ExporterConfig {
 func getConfig(configFileArg *os.File) types.ExporterConfig {
 	fileBytes, err := readConfigFile(configFileArg)
 	if err != nil {
-		fmt.Printf("error reading config file: %s", err)
+		fmt.Printf("error reading provided config file %s: %s", configFileArg.Name(), err)
 		os.Exit(1)
 	}
 
 	config, err := parseConfig(fileBytes)
 	if err != nil {
-		fmt.Printf("error parsing config file: %s", err)
+		fmt.Printf("error parsing provided config file %s: %s", configFileArg.Name(), err)
 		os.Exit(1)
 	}
 
@@ -58,5 +54,25 @@ func parseConfig(config []byte) (types.ExporterConfig, error) {
 		return types.ExporterConfig{}, fmt.Errorf("error parsing supplied YAML configuration file: %s", err.Error())
 	}
 
+	addTargetDefaults(&exporterConfig)
+
 	return exporterConfig, nil
+}
+
+func addTargetDefaults(config *types.ExporterConfig) {
+	for i, target := range config.Targets {
+		if target.DecimalPointSeparator == "" {
+			config.Targets[i].DecimalPointSeparator = "."
+		}
+
+		if target.ThousandsSeparator == "" {
+			config.Targets[i].ThousandsSeparator = ","
+		}
+
+		for j, metric := range target.Metrics {
+			if metric.Type == "" {
+				config.Targets[i].Metrics[j].Type = "untyped"
+			}
+		}
+	}
 }

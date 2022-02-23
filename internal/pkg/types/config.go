@@ -1,7 +1,7 @@
 package types
 
 type ExporterConfig struct {
-	ScrapeConfig ScrapeConfig `yaml:"scrape_config"`
+	Targets      []TargetConfig
 	GlobalConfig GlobalConfig `yaml:"global_config"`
 }
 
@@ -10,18 +10,17 @@ type GlobalConfig struct {
 	Port             int
 }
 
-type ScrapeConfig struct {
-	Name                  string `yaml:",omitempty"`
+type TargetConfig struct {
 	Address               string
-	Selector              string
-	DecimalPointSeparator string       `yaml:"decimal_point_separator"`
-	ThousandsSeparator    string       `yaml:"thousands_separator"`
-	MetricConfig          MetricConfig `yaml:"metric"`
+	DecimalPointSeparator string `yaml:"decimal_point_separator"`
+	ThousandsSeparator    string `yaml:"thousands_separator"`
+	Metrics               []MetricConfig
 }
 
 type MetricConfig struct {
-	Name   string
-	Help   string
-	Type   string
-	Labels map[string]string
+	Name     string
+	Help     string
+	Type     string
+	Selector string
+	Labels   map[string]string
 }

@@ -19,7 +19,10 @@ func TestProbeHandler(t *testing.T) {
 
 	config := testExporterConfig
 	server := getTestServer("<div id=\"foobar\">1</div>")
-	config.ScrapeConfig.Address = server.URL
+
+	for i := range config.Targets {
+		config.Targets[i].Address = server.URL
+	}
 
 	rr := httptest.NewRecorder()
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

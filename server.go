@@ -42,5 +42,5 @@ func probeHandler(w http.ResponseWriter, r *http.Request, config types.ExporterC
 
 	duration := time.Since(start).Seconds()
 	// @TODO: expose metrics about duration
-	log.Debugf("scrape of endpoint %s finished in %0.2f seconds", config.ScrapeConfig.Address, duration)
+	log.Debugf("scrape of all targets finished in %0.2f seconds", duration)
 }

@@ -12,59 +12,59 @@ type collector struct {
 }
 
 func (c collector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- makeMetricDesc(c.config)
+	for _, target := range c.config.Targets {
+		for _, metric := range target.Metrics {
+			ch <- makeMetricDesc(c.config, metric)
+		}
+	}
 }
 
 func (c collector) Collect(ch chan<- prometheus.Metric) {
-	value, err := scrape(c.config.ScrapeConfig)
+	values := scrape(c.config.Targets)
 
-	if err != nil {
-		// @TODO: better handling
-		panic(fmt.Sprintf("error scraping: %s", err.Error()))
+	for i, target := range c.config.Targets {
+		for j, metric := range target.Metrics {
+			prometheusMetric, err := makeNewConstMetric(c.config, metric, values[i][j])
+
+			if err != nil {
+				panic(fmt.Sprintf("error making const metric for %s: %s", metric.Name, err.Error()))
+			}
+
+			ch <- prometheusMetric
+		}
 	}
-
-	metric, err := makeNewConstMetric(c.config, value)
-
-	if err != nil {
-		panic(err.Error())
-	}
-
-	ch <- metric
 }
 
-func makeMetricDesc(config types.ExporterConfig) *prometheus.Desc {
-	metricConfig := config.ScrapeConfig.MetricConfig
-
+func makeMetricDesc(config types.ExporterConfig, metric types.MetricConfig) *prometheus.Desc {
 	return prometheus.NewDesc(
-		config.GlobalConfig.MetricNamePrefix+metricConfig.Name,
-		metricConfig.Help,
-		getLabelKeys(metricConfig.Labels),
+		config.GlobalConfig.MetricNamePrefix+metric.Name,
+		metric.Help,
+		getLabelKeys(metric.Labels),
 		nil,
 	)
 }
 
-func makeNewConstMetric(config types.ExporterConfig, value float64) (prometheus.Metric, error) {
-	metricConfig := config.ScrapeConfig.MetricConfig
+func makeNewConstMetric(config types.ExporterConfig, metric types.MetricConfig, value float64) (prometheus.Metric, error) {
 	var valueType prometheus.ValueType
 
-	switch metricConfig.Type {
+	switch metric.Type {
 	case "histogram":
 	case "summary":
-		return nil, fmt.Errorf("metric type \"%s\" is not supported", metricConfig.Type)
+		return nil, fmt.Errorf("metric type \"%s\" is not supported", metric.Type)
 	default:
-		valueType = getPrometheusValueType(metricConfig.Type)
+		valueType = getPrometheusValueType(metric.Type)
 	}
 
-	desc := makeMetricDesc(config)
+	desc := makeMetricDesc(config, metric)
 
-	labelValues := getLabelValues(metricConfig.Labels)
-	metric, err := prometheus.NewConstMetric(desc, valueType, value, labelValues...)
+	labelValues := getLabelValues(metric.Labels)
+	prometheusMetric, err := prometheus.NewConstMetric(desc, valueType, value, labelValues...)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return metric, nil
+	return prometheusMetric, nil
 }
 
 func getLabelKeys(labels map[string]string) []string {
