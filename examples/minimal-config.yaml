@@ -1,0 +1,7 @@
+targets:
+  - address: "https://en.wikipedia.org/wiki/Special:Statistics"
+    metrics:
+      - name: wikipedia_articles_total
+        type: gauge
+        help: "Total of articles available at Wikipedia"
+        selector: "//div[@id='mw-content-text']//tr[@class='mw-statistics-articles']/td[@class='mw-statistics-numbers']/text()"

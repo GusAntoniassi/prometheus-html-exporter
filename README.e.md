@@ -1,34 +1,29 @@
-# prometheus-html-exporter
+---
+name: prometheus-html-exporter
+fullConfigFile: examples/full-config.yaml
+---
+# {{ .name }}
 
 **Still under development**
 
-[![<nil> License](http://img.shields.io/badge/License-<nil>-blue.svg)](LICENSE)
+{{template "license/shields" .}}
 
-Go package documentation not found!
+{{ pkgdoc }}
 
-# TOC
-- [Running (under development)](#running-(under-development))
-  - [Testing](#testing)
-- [Features](#features)
-  - [Implemented](#implemented)
-  - [Under development:](#under-development)
+# {{ toc 4 }}
 
 This project aims to allow the scraping of metrics contained within HTML web pages, collecting them with an XPath selector and exporting them as metrics in a Prometheus format. See the [docs](docs/documentation.md) for more information.
 
 ## Running (under development)
 For now, you must pass a config yaml file, so you could run the program as:
-```sh
-go run . -c examples/full-config.yaml
-```
+{{ color "sh" (print "go run . -c " .fullConfigFile) }}
 
 A binary release distribution and Docker image are planned for the near future.
 
 ### Testing
 
 Run the test suite with the following command:
-```sh
-make test
-```
+{{ color "sh" "make test" }}
 
 ## Features
 ### Implemented
