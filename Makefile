@@ -1,3 +1,9 @@
+.PHONY: dependency
+dependency:
+	go mod download
+	asdf install
+	pre-commit install
+
 .PHONY: run
 run:
 	go run . -c examples/full-config.yaml
