@@ -16,3 +16,8 @@ docs/documentation.md:
 
 .PHONY: docs
 docs: README.md docs/documentation.md
+
+.PHONY: changelog
+changelog:
+	changelog prepare
+	vim change.log
