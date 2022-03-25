@@ -9,6 +9,8 @@ ifeq ($(GOOS),)
 GOOS := darwin dragonfly freebsd linux netbsd openbsd solaris windows
 endif
 
+DOCKER_IMAGE="gusantoniassi/prometheus-html-exporter"
+
 .PHONY: dependency
 dependency:
 	go mod download
@@ -92,5 +94,9 @@ tarball:
 		rm -rf $(TARBALL_DIR)/$$dir; \
 	done
 
+.PHONY: docker-build
+docker-build:
+	docker build -t $(DOCKER_IMAGE):latest .
+
 .PHONY: release
-release: build tarball
+release: build tarball docker-build
