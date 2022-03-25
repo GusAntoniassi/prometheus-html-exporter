@@ -50,7 +50,7 @@ func main() {
 		Addr:         fmt.Sprintf(":%d", config.GlobalConfig.Port),
 	}
 
-	log.Infof("Server starting and listening on port %d", config.GlobalConfig.Port)
+	log.Infof("server starting and listening on port %d", config.GlobalConfig.Port)
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server error: %s", err.Error())
