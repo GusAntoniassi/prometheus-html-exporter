@@ -25,5 +25,5 @@ docs: README.md docs/documentation.md
 
 .PHONY: changelog
 changelog:
-	changelog prepare
-	vim change.log
+	git-chglog --output CHANGELOG.md
+	vim CHANGELOG.md
