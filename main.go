@@ -16,7 +16,7 @@ func main() {
 
 	configFile := parser.File("c", "config", os.O_RDONLY, 0600, &argparse.Options{
 		Help:     "Path to the YAML configuration file",
-		Required: true,
+		Required: false,
 	})
 
 	err := parser.Parse(os.Args)
@@ -25,7 +25,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	config := getConfig(configFile)
+	config := getDefaultConfig()
+	if !argparse.IsNilFile(configFile) {
+		config = getConfig(configFile)
+	} else {
+		log.Info("initializing exporter without a config file")
+	}
+
 	metricRegistry, err := getExporterMetricsRegistry()
 
 	if err != nil {
