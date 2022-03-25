@@ -20,5 +20,49 @@ targets:
 ## Configuring
 Work in progress
 
+### Necessary tools:
+
+Most dependencies are managed by `asdf`, install them running:
+```
+asdf install
+```
+
+To template markdown files, use [`emd`](https://github.com/mh-cbon/emd).
+
 ## Developing
 Work in progress
+
+### Release process
+Test everything before publishing:
+```sh
+make test
+```
+
+Update documentation (`README.md` and/or `docs/*.e.md`) if necessary:
+```sh
+make docs
+```
+
+Build binaries and Dockerfiles:
+```sh
+make release
+```
+
+Update CHANGELOG.md with current version info:
+```sh
+make changelog
+git commit -m "chore: update CHANGELOG" ./CHANGELOG.md
+```
+
+Generate version tag:
+```sh
+git tag vX.X.X
+git push --tags
+```
+
+[Create the release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) for the current tag, and upload files in `build/tarball/*` to GitHub
+
+Push the image to Docker Hub:
+```sh
+docker push gusantoniassi/prometheus-html-exporter
+```
