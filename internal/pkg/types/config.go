@@ -8,6 +8,7 @@ type ExporterConfig struct {
 type GlobalConfig struct {
 	MetricNamePrefix string `yaml:"metric_name_prefix"`
 	Port             int
+	HasConfigFile    bool
 }
 
 type TargetConfig struct {
