@@ -78,6 +78,7 @@ func probeHandler(w http.ResponseWriter, r *http.Request, config types.ExporterC
 			return
 		}
 
+		// @TODO: set configs from query
 	}
 
 	collector := collector{config: config}

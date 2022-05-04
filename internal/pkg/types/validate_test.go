@@ -7,22 +7,23 @@ import (
 
 type testStruct struct {
 	notRequired            string
-	required               string `required`
-	alsoRequired           int    `required`
+	required               string `required:"true"`
+	alsoRequired           string `required:"true"`
 	anotherStructTag       string `another-tag:"with-value"`
-	RequiredWithAnotherTag string `required another-tag`
+	RequiredWithAnotherTag string `required:"true" another-tag:"foobar"`
 }
 
 type complexTestStruct struct {
 	notRequired string
-	required    string `required`
+	required    string `required:"true"`
 	innerStruct testStruct
 }
 
 func TestValidateOk(t *testing.T) {
 	s := testStruct{
-		required:     "foo",
-		alsoRequired: 0,
+		required:               "foo",
+		alsoRequired:           "0",
+		RequiredWithAnotherTag: "foo",
 	}
 
 	err := Validate(s)
@@ -33,10 +34,11 @@ func TestValidateOk(t *testing.T) {
 
 func TestValidateWithNestedStruct(t *testing.T) {
 	s := complexTestStruct{
-		required: "foo",
+		required:    "foo",
+		notRequired: "",
 		innerStruct: testStruct{
 			required:     "foo",
-			alsoRequired: 0,
+			alsoRequired: "0",
 		},
 	}
 
@@ -60,6 +62,6 @@ func TestValidateWithErrors(t *testing.T) {
 
 	errorMessage := err.Error()
 	if !strings.Contains(errorMessage, "field required") || !strings.Contains(errorMessage, "field alsoRequired") {
-		t.Fatal("expected error message to contain all invalid fields, got the following message:\n", errorMessage)
+		t.Fatal("expected error message to contain all invalid fields in a single message, got the following message:\n", errorMessage)
 	}
 }
