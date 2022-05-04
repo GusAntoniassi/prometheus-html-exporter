@@ -123,7 +123,9 @@ func TestAddTargetDefaults(t *testing.T) {
 		},
 	}
 
-	addTargetDefaults(&config)
+	for i := range config.Targets {
+		addTargetDefaults(&config.Targets[i])
+	}
 
 	assert(t, config.Targets[0].DecimalPointSeparator == ".", "expected default decimal point separator to be '.', got: '%s'", config.Targets[0].DecimalPointSeparator)
 	assert(t, config.Targets[0].ThousandsSeparator == ",", "expected default thousands separator to be ',', got: '%s'", config.Targets[0].ThousandsSeparator)

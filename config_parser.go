@@ -58,7 +58,9 @@ func parseConfig(config []byte) (types.ExporterConfig, error) {
 		return types.ExporterConfig{}, fmt.Errorf("error parsing supplied YAML configuration file: %s", err.Error())
 	}
 
-	addTargetDefaults(&exporterConfig)
+	for i := range exporterConfig.Targets {
+		addTargetDefaults(&exporterConfig.Targets[i])
+	}
 
 	return exporterConfig, nil
 }
@@ -98,20 +100,18 @@ func parseConfigFromURLQuery(query url.Values) {
 		**/
 }
 
-func addTargetDefaults(config *types.ExporterConfig) {
-	for i, target := range config.Targets {
-		if target.DecimalPointSeparator == "" {
-			config.Targets[i].DecimalPointSeparator = "."
-		}
+func addTargetDefaults(target *types.TargetConfig) {
+	if target.DecimalPointSeparator == "" {
+		target.DecimalPointSeparator = "."
+	}
 
-		if target.ThousandsSeparator == "" {
-			config.Targets[i].ThousandsSeparator = ","
-		}
+	if target.ThousandsSeparator == "" {
+		target.ThousandsSeparator = ","
+	}
 
-		for j, metric := range target.Metrics {
-			if metric.Type == "" {
-				config.Targets[i].Metrics[j].Type = "untyped"
-			}
+	for j, metric := range target.Metrics {
+		if metric.Type == "" {
+			target.Metrics[j].Type = "untyped"
 		}
 	}
 }
