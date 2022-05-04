@@ -78,7 +78,16 @@ func probeHandler(w http.ResponseWriter, r *http.Request, config types.ExporterC
 			return
 		}
 
-		// @TODO: set configs from query
+		targetConfig, err := getTargetConfigFromURLQuery(queryParams)
+
+		if err != nil {
+			log.Error(err)
+			instrumentedResponseWriter.WriteHeader(http.StatusBadRequest)
+			instrumentedResponseWriter.Write([]byte(fmt.Sprintf("invalid configuration supplied: %s", err.Error())))
+			return
+		}
+
+		config.Targets = targetConfig
 	}
 
 	collector := collector{config: config}

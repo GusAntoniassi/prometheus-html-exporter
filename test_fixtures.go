@@ -45,6 +45,7 @@ var testExporterConfig = types.ExporterConfig{
 	},
 	GlobalConfig: types.GlobalConfig{
 		MetricNamePrefix: "htmlexporter_",
+		HasConfigFile:    true,
 	},
 }
 
