@@ -65,39 +65,30 @@ func parseConfig(config []byte) (types.ExporterConfig, error) {
 	return exporterConfig, nil
 }
 
-func parseConfigFromURLQuery(query url.Values) {
-	config := getDefaultConfig()
-
-	config.Targets = []types.TargetConfig{
-		{
-			Address:               query.Get("target"),
-			DecimalPointSeparator: query.Get("decimal_point_separator"),
-			ThousandsSeparator:    query.Get("thousands_separator"),
-			Metrics: []types.MetricConfig{
-				{
-					Name:     query.Get("metric_name"),
-					Help:     query.Get("metric_help"),
-					Type:     query.Get("metric_type"),
-					Selector: query.Get("selector"),
-				},
+func getTargetConfigFromURLQuery(query url.Values) ([]types.TargetConfig, error) {
+	target := types.TargetConfig{
+		Address:               query.Get("target"),
+		DecimalPointSeparator: query.Get("decimal_point_separator"),
+		ThousandsSeparator:    query.Get("thousands_separator"),
+		Metrics: []types.MetricConfig{
+			{
+				Name:     query.Get("metric_name"),
+				Help:     query.Get("metric_help"),
+				Type:     query.Get("metric_type"),
+				Selector: query.Get("selector"),
 			},
 		},
 	}
 
-	// @TODO: validation
+	addTargetDefaults(&target)
 
-	/**
-		params:
-	      selector: "//div[@id='mw-content-text']//tr[@class='mw-statistics-articles']/td[@class='mw-statistics-numbers']/text()"
-	      decimal_point_separator: ","
-	      thousands_separator: " "
-	      metric_name: wikipedia_articles_total
-	      metric_type: gauge
-	      metric_help: "Total of articles available at Wikipedia"
+	err := types.Validate(target)
 
-		- https://fr.wikipedia.org/wiki/Special:Statistics
+	if err != nil {
+		return []types.TargetConfig{}, err
+	}
 
-		**/
+	return []types.TargetConfig{target}, nil
 }
 
 func addTargetDefaults(target *types.TargetConfig) {

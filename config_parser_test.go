@@ -131,3 +131,7 @@ func TestAddTargetDefaults(t *testing.T) {
 	assert(t, config.Targets[0].ThousandsSeparator == ",", "expected default thousands separator to be ',', got: '%s'", config.Targets[0].ThousandsSeparator)
 	assert(t, config.Targets[0].Metrics[0].Type == "untyped", "expected default metric type to be 'untyped', got: '%s'", config.Targets[0].Metrics[0].Type)
 }
+
+func TestGetTargetConfigFromURLQuery(t *testing.T) {
+	// @TODO
+}
